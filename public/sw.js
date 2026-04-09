@@ -40,10 +40,12 @@ self.addEventListener("fetch", (event) => {
   // Only handle same-origin requests
   if (url.origin !== self.location.origin) return;
 
-  // Navigation requests: Network first, then fallback to cache (offline page)
+  // Navigation requests: Network first, then Cache fallback, then Offline fallback
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => {
+      fetch(request).catch(async () => {
+        const cachedResponse = await caches.match(request);
+        if (cachedResponse) return cachedResponse;
         return caches.match(OFFLINE_URL);
       })
     );
