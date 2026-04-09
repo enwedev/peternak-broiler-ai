@@ -30,6 +30,7 @@ export const viewport = {
 };
 
 import PWARegistration from "@/components/PWARegistration";
+import BottomNav from "@/components/BottomNav";
 
 export default function RootLayout({
   children,
@@ -41,8 +42,11 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        {children}
+      <body className="min-h-full flex flex-col bg-base-200">
+        <main className="flex-1 pb-20 overflow-auto">
+          {children}
+        </main>
+        <BottomNav />
         <PWARegistration />
       </body>
     </html>
