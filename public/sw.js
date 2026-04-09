@@ -1,4 +1,4 @@
-const CACHE_NAME = "broiler-ai-cache-v2";
+const CACHE_NAME = "broiler-ai-cache-v4";
 const OFFLINE_URL = "/offline";
 
 const STATIC_ASSETS = [
@@ -10,6 +10,7 @@ const STATIC_ASSETS = [
 ];
 
 self.addEventListener("install", (event) => {
+  console.log("[SW] Installing v4...");
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS);
@@ -19,11 +20,13 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
+  console.log("[SW] Activated v4");
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
+            console.log("[SW] Deleting old cache:", cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -40,27 +43,32 @@ self.addEventListener("fetch", (event) => {
   // Only handle same-origin requests
   if (url.origin !== self.location.origin) return;
 
-  // Navigation requests: Network first, then Cache fallback, then Offline fallback
+  // Navigation requests: Network first -> Cache fallback -> Offline fallback
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request).catch(async () => {
-        const cachedResponse = await caches.match(request);
-        if (cachedResponse) return cachedResponse;
+        console.log("[SW] Navigation failed, checking cache for:", url.pathname);
+        const cachedResponse = await caches.match(request, { ignoreSearch: true });
+        if (cachedResponse) {
+          console.log("[SW] Found cached response for navigation:", url.pathname);
+          return cachedResponse;
+        }
+        console.log("[SW] No cache found, falling back to offline page");
         return caches.match(OFFLINE_URL);
       })
     );
     return;
   }
 
-  // Static assets and other requests: Cache first, then Network
+  // Static assets and other requests: Cache first -> Network
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
+    caches.match(request, { ignoreSearch: true }).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
 
       return fetch(request).then((networkResponse) => {
-        // Cache successful same-origin responses for next time
+        // Cache same-origin successful responses
         if (
           networkResponse &&
           networkResponse.status === 200 &&
